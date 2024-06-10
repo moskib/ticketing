@@ -1,13 +1,12 @@
 import express from 'express';
 import 'express-async-errors';
 import { json } from 'body-parser';
+import { NotFoundError, errorHandler } from '@mkgittix/core';
 
 import { currentUserRouter } from './routes/current-user';
 import { signinRouter } from './routes/signin';
 import { signupRouter } from './routes/signup';
 import { signoutRouter } from './routes/signout';
-import { errorHandler } from './middlewares/error-handler';
-import { NotFoundError } from './errors/not-found-error';
 import cookieSession from 'cookie-session';
 
 const app = express();
