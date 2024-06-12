@@ -1,8 +1,9 @@
 import express from 'express';
 import 'express-async-errors';
 import { json } from 'body-parser';
-import { NotFoundError, errorHandler } from '@mkgittix/core';
+import { NotFoundError, currentUser, errorHandler } from '@mkgittix/core';
 import cookieSession from 'cookie-session';
+import { createTicketRouter } from './routes/new';
 
 const app = express();
 app.set('trust proxy', true);
@@ -13,6 +14,8 @@ app.use(
     secure: process.env.NODE_ENV !== 'test', // only visit if we have https connection
   })
 );
+app.use(currentUser);
+app.use(createTicketRouter);
 
 app.all('*', async () => {
   throw new NotFoundError();
