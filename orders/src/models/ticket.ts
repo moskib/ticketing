@@ -37,10 +37,9 @@ const ticketSchema = new mongoose.Schema(
 );
 
 ticketSchema.statics.build = (attrs: TicketAttrs) => {
-  return new Ticket(attrs)
-}
+  return new Ticket(attrs);
+};
 
-const Ticket = mongoose.model<TicketDoc, TicketModel>('Ticket', ticketSchema)
+const Ticket = mongoose.model<TicketDoc, TicketModel>('Ticket', ticketSchema);
 
-export Ticket
-
+export { Ticket };
