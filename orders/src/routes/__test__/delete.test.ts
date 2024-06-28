@@ -1,20 +1,19 @@
 import request from 'supertest';
-import { Ticket } from '../../models/ticket';
 import { app } from '../../app';
-import { OrderStatus } from '@mkgittix/core';
+import { Ticket } from '../../models/ticket';
+import { Order, OrderStatus } from '../../models/order';
+import { natsWrapper } from '../../nats-wrapper';
 
 it('marks an order as cancelled', async () => {
-  // Create a ticket
+  // create a ticket with Ticket Model
   const ticket = Ticket.build({
     title: 'concert',
     price: 20,
   });
-
   await ticket.save();
 
   const user = global.signin();
-
-  // make a request to build an order with this ticket
+  // make a request to create an order
   const { body: order } = await request(app)
     .post('/api/orders')
     .set('Cookie', user)
@@ -28,13 +27,33 @@ it('marks an order as cancelled', async () => {
     .send()
     .expect(204);
 
-  // ensure order is cancelled
-  const response = await request(app)
-    .get(`/api/orders/${order.id}`)
-    .set('Cookie', user)
-    .send();
+  // expectation to make sure the thing is cancelled
+  const updatedOrder = await Order.findById(order.id);
 
-  expect(response.body.status).toBe(OrderStatus.Cancelled);
+  expect(updatedOrder!.status).toEqual(OrderStatus.Cancelled);
 });
 
-it.todo('should emit order cancelled event');
+it('emits a order cancelled event', async () => {
+  const ticket = Ticket.build({
+    title: 'concert',
+    price: 20,
+  });
+  await ticket.save();
+
+  const user = global.signin();
+  // make a request to create an order
+  const { body: order } = await request(app)
+    .post('/api/orders')
+    .set('Cookie', user)
+    .send({ ticketId: ticket.id })
+    .expect(201);
+
+  // make a request to cancel the order
+  await request(app)
+    .delete(`/api/orders/${order.id}`)
+    .set('Cookie', user)
+    .send()
+    .expect(204);
+
+  expect(natsWrapper.client.publish).toHaveBeenCalled();
+});

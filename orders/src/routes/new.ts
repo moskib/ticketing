@@ -1,11 +1,12 @@
+import mongoose from 'mongoose';
+import express, { Request, Response } from 'express';
 import {
-  BadRequestError,
-  NotFoundError,
-  OrderStatus,
   requireAuth,
   validateRequest,
+  NotFoundError,
+  OrderStatus,
+  BadRequestError,
 } from '@mkgittix/core';
-import express, { Request, Response } from 'express';
 import { body } from 'express-validator';
 import { Ticket } from '../models/ticket';
 import { Order } from '../models/order';
@@ -23,13 +24,14 @@ router.post(
     body('ticketId')
       .not()
       .isEmpty()
-      .isMongoId()
+      .custom((input: string) => mongoose.Types.ObjectId.isValid(input))
       .withMessage('TicketId must be provided'),
   ],
   validateRequest,
   async (req: Request, res: Response) => {
     const { ticketId } = req.body;
-    // Find the ticket the use ris trying to order in the database
+
+    // Find the ticket the user is trying to order in the database
     const ticket = await Ticket.findById(ticketId);
     if (!ticket) {
       throw new NotFoundError();
@@ -52,7 +54,6 @@ router.post(
       expiresAt: expiration,
       ticket,
     });
-
     await order.save();
 
     // Publish an event saying that an order was created
@@ -60,7 +61,7 @@ router.post(
       id: order.id,
       status: order.status,
       userId: order.userId,
-      expiresAt: order.expiresAt.toISOString(),
+      expiresAt: expiration.toISOString(),
       ticket: {
         id: ticket.id,
         price: ticket.price,
