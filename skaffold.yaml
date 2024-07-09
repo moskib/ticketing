@@ -26,6 +26,14 @@ build:
             dest: .
       docker:
         dockerfile: Dockerfile
+    - image: moskib/expiration
+      context: expiration
+      sync:
+        manual:
+          - src: src/**/*.ts
+            dest: .
+      docker:
+        dockerfile: Dockerfile
     - image: moskib/ticketing-client
       context: client
       sync:
