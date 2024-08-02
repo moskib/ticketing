@@ -48,6 +48,8 @@ build:
         manual:
           - src: '**/*.js'
             dest: .
+          - src: '**/*.jsx'
+            dest: .
       docker:
         dockerfile: Dockerfile
   local:
