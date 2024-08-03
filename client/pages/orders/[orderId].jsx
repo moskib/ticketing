@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import StripeCheckout from 'react-stripe-checkout';
+import { STRIPE_PUBLISHABLE_KEY } from '../../constants';
 
-const OrderShow = ({ order }) => {
+const OrderShow = ({ order, currentUser }) => {
   const [timeLeft, setTimeLeft] = useState(0);
 
   useEffect(() => {
@@ -24,6 +25,8 @@ const OrderShow = ({ order }) => {
       <StripeCheckout
         token={(token) => console.log(token)}
         stripeKey={STRIPE_PUBLISHABLE_KEY}
+        amount={order.ticket.price * 100}
+        email={currentUser.email}
       />
     </div>
   );
