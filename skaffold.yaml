@@ -58,4 +58,11 @@ manifests:
   rawYaml:
     - ./infra/k8s/*
 deploy:
-  kubectl: {}
+  kubectl:
+    hooks:
+      after:
+        - host:
+            command: ["sh", "./infra/scripts/topic-init.sh"]
+
+# init script not working. need to figure out why
+
