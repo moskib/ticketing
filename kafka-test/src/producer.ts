@@ -1,50 +1,26 @@
-import { Kafka } from 'kafkajs';
-
-const kafka = new Kafka({
-  clientId: 'test',
-  brokers: ['localhost:9092'], // Use localhost since you're port-forwarding
-});
-
-// const admin = kafka.admin();
-const producer = kafka.producer();
+import { kafkaWrapper } from './kafka-wrapper';
+import { TicketCreatedProducer } from './events/ticket-created-producer';
 
 const produce = async () => {
-  // console.log('Connecting admin...');
-  // await admin.connect();
-  // console.log('Creating test-topic...');
-  // const success = await admin.createTopics({
-  //   topics: [
-  //     {
-  //       topic: 'test-topic',
-  //     },
-  //   ],
-  // });
-
-  // if (!success) {
-  //   throw new Error('Failed to create topic');
-  // }
-  // console.info('Created topic successfully!');
-
-  console.info('Connecting producer...');
-  await producer.connect();
-  console.info('Producer connected!');
-
-  console.info('Sending a message...');
-  await producer.send({
-    topic: 'test-topic',
-    messages: [{ value: 'Hello world!' }],
+  await kafkaWrapper.connect({
+    clientId: 'test',
+    brokers: ['localhost:9092'], // Use localhost since you're port-forwarding
   });
-  await producer.disconnect();
-  // await admin.disconnect();
+
+  new TicketCreatedProducer(kafkaWrapper.producer).send({
+    id: 'abc',
+    price: 20,
+    title: 'movie',
+  });
+
+  kafkaWrapper.disconnect();
 };
 
 produce().catch(console.error);
 
 process.on('SIGINT', async () => {
-  await producer.disconnect();
-  // await admin.disconnect();
+  kafkaWrapper.disconnect();
 });
 process.on('SIGTERM', async () => {
-  await producer.disconnect();
-  // await admin.disconnect();
+  kafkaWrapper.disconnect();
 });
