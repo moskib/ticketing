@@ -1,8 +1,8 @@
 import mongoose from 'mongoose';
 import { app } from './app';
-import { natsWrapper } from './nats-wrapper';
-import { OrderCreatedListener } from './events/listeners/order-created-listener';
-import { OrderCancelledListener } from './events/listeners/order-cancelled-listener';
+import { kafkaWrapper } from './kafka-wrapper';
+import { OrderCreatedConsumer } from './events/consumers/order-created-consumer';
+import { OrderCancelledConsumer } from './events/consumers/order-cancelled-consumer';
 
 const start = async () => {
   if (!process.env.JWT_KEY) {
@@ -11,37 +11,31 @@ const start = async () => {
   if (!process.env.MONGO_URI) {
     throw new Error('MONGO_URI must be defined');
   }
-  if (!process.env.NATS_URL) {
-    throw new Error('NATS_URL must be defined');
+  if (!process.env.KAFKA_BROKERS) {
+    throw new Error('KAFKA_BROKERS is required');
   }
-  if (!process.env.NATS_CLIENT_ID) {
-    throw new Error('NATS_CLIENT_ID must be defined');
-  }
-  if (!process.env.NATS_CLUSTER_ID) {
-    throw new Error('NATS_CLUSTER_ID must be defined');
+  if (!process.env.KAKFA_CLIENT_ID) {
+    throw new Error('KAKFA_CLIENT_ID is required');
   }
   try {
-    await natsWrapper.connect(
-      process.env.NATS_CLUSTER_ID,
-      process.env.NATS_CLIENT_ID,
-      process.env.NATS_URL
-    );
-
-    natsWrapper.client.on('close', () => {
-      console.log('NATS connection closed!');
-      process.exit();
+    kafkaWrapper.connect({
+      brokers: process.env.KAFKA_BROKERS.split(','),
+      clientId: process.env.KAFKA_CLIENT_ID,
     });
 
-    process.on('SIGINT', () => natsWrapper.client.close());
-    process.on('SIGTERM', () => natsWrapper.client.close());
+    process.on('SIGINT', () => kafkaWrapper.disconnect());
+    process.on('SIGTERM', () => kafkaWrapper.disconnect());
 
-    new OrderCreatedListener(natsWrapper.client).listen();
-    new OrderCancelledListener(natsWrapper.client).listen();
+    new OrderCreatedConsumer(kafkaWrapper).consume();
+    new OrderCancelledConsumer(kafkaWrapper).consume();
 
     await mongoose.connect(process.env.MONGO_URI);
     console.log('Connected to mongodb!');
   } catch (error) {
     console.error(error);
+  } finally {
+    console.log('Disconnecting from kafka');
+    kafkaWrapper.disconnect();
   }
 
   app.listen(3000, () => {

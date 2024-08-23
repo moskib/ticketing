@@ -8,8 +8,8 @@ import {
   BadRequestError,
 } from '@mkgittix/core';
 import { Ticket } from '../models/ticket';
-import { TicketUpdatedPublisher } from '../events/publishers/ticket-update-publisher';
-import { natsWrapper } from '../nats-wrapper';
+import { TicketUpdatedProducer } from '../events/producers/ticket-updated-producer';
+import { kafkaWrapper } from '../kafka-wrapper';
 
 const router = express.Router();
 
@@ -46,7 +46,7 @@ router.put(
 
     await ticket.save();
 
-    new TicketUpdatedPublisher(natsWrapper.client).publish({
+    new TicketUpdatedProducer(kafkaWrapper.producer).send({
       id: ticket.id,
       title: ticket.title,
       price: ticket.price,

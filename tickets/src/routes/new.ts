@@ -2,8 +2,8 @@ import { requireAuth, validateRequest } from '@mkgittix/core';
 import express, { Request, Response } from 'express';
 import { body } from 'express-validator';
 import { Ticket } from '../models/ticket';
-import { TicketCreatedPublisher } from '../events/publishers/ticket-created-publisher';
-import { natsWrapper } from '../nats-wrapper';
+import { TicketCreatedProducer } from '../events/producers/ticket-created-producer';
+import { kafkaWrapper } from '../kafka-wrapper';
 
 const router = express.Router();
 
@@ -28,7 +28,7 @@ router.post(
 
     await ticket.save();
 
-    await new TicketCreatedPublisher(natsWrapper.client).publish({
+    await new TicketCreatedProducer(kafkaWrapper.producer).send({
       id: ticket.id,
       title: ticket.title,
       price: ticket.price,

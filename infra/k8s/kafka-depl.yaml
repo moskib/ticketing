@@ -38,7 +38,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: kafka-service
+  name: kafka-srv
 spec:
   selector:
     app: kafka

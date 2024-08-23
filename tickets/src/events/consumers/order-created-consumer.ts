@@ -1,17 +1,14 @@
-import { Listener, OrderCreatedEvent, Subjects } from '@mkgittix/core';
-import { Message } from 'node-nats-streaming';
-import { queueGroupName } from './queue-group-name';
+import { BaseConsumer, OrderCreatedEvent, Topics } from '@mkgittix/core';
 import { Ticket } from '../../models/ticket';
-import { TicketUpdatedPublisher } from '../publishers/ticket-update-publisher';
+import { TicketUpdatedProducer } from '../producers/ticket-updated-producer';
+import { queueGroupName } from './queue-group-name';
+import { kafkaWrapper } from '../../kafka-wrapper';
 
-export class OrderCreatedListener extends Listener<OrderCreatedEvent> {
-  readonly subject = Subjects.OrderCreated;
-  queueGroupName = queueGroupName;
+export class OrderCreatedConsumer extends BaseConsumer<OrderCreatedEvent> {
+  readonly topic = Topics.OrderCreated;
+  groupId = queueGroupName;
 
-  async onMessage(
-    data: OrderCreatedEvent['data'],
-    msg: Message
-  ): Promise<void> {
+  async onMessage(data: OrderCreatedEvent['data']): Promise<void> {
     // Find the ticket that the order is reserving
     const ticket = await Ticket.findById(data.ticket.id);
 
@@ -26,7 +23,7 @@ export class OrderCreatedListener extends Listener<OrderCreatedEvent> {
     //Save the ticket
     await ticket.save();
 
-    new TicketUpdatedPublisher(this.client).publish({
+    new TicketUpdatedProducer(kafkaWrapper.producer).send({
       id: ticket.id,
       price: ticket.price,
       title: ticket.title,
@@ -34,8 +31,5 @@ export class OrderCreatedListener extends Listener<OrderCreatedEvent> {
       orderId: ticket.orderId,
       version: ticket.version,
     });
-
-    // ack the message
-    msg.ack();
   }
 }

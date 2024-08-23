@@ -6,6 +6,11 @@ BOOTSTRAP_SERVER=kafka-service:9092
 # Array of topics to create
 TOPICS=(
   "ticket-created"
+  "ticket-updated"
+  "order-created"
+  "order-cancelled"
+  "expiration-complete"
+  "payment-created"
 )
 
 # Define namespace and label selector
