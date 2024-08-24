@@ -1,12 +1,11 @@
 import mongoose from 'mongoose';
 import { Order } from '../../../models/order';
-import { natsWrapper } from '../../../nats-wrapper';
-import { OrderCancelledListener } from '../order-cancelled-listener';
 import { OrderCancelledEvent, OrderStatus } from '@mkgittix/core';
-import { Message } from 'node-nats-streaming';
+import { OrderCancelledConsumer } from '../order-cancelled-consumer';
+import { kafkaWrapper } from '../../../kafka-wrapper';
 
 const setup = async () => {
-  const listener = new OrderCancelledListener(natsWrapper.client);
+  const consumer = new OrderCancelledConsumer(kafkaWrapper);
 
   const order = Order.build({
     id: new mongoose.Types.ObjectId().toHexString(),
@@ -26,28 +25,15 @@ const setup = async () => {
     },
   };
 
-  // @ts-ignore
-  const msg: Message = {
-    ack: jest.fn(),
-  };
-
-  return { listener, data, msg, order };
+  return { consumer, data, order };
 };
 
 it('updatdes the status of the order', async () => {
-  const { listener, data, msg, order } = await setup();
+  const { consumer, data, order } = await setup();
 
-  await listener.onMessage(data, msg);
+  await consumer.onMessage(data);
 
   const updatedOrder = await Order.findById(order.id);
 
   expect(updatedOrder!.status).toEqual(OrderStatus.Cancelled);
-});
-
-it('acks the message', async () => {
-  const { listener, data, msg, order } = await setup();
-
-  await listener.onMessage(data, msg);
-
-  expect(msg.ack).toHaveBeenCalled();
 });

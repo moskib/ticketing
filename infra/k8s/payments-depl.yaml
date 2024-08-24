@@ -16,11 +16,9 @@ spec:
         - name: payments
           image: moskib/payments
           env:
-            - name: NATS_URL
-              value: 'http://nats-srv:4222'
-            - name: NATS_CLUSTER_ID
-              value: ticketing
-            - name: NATS_CLIENT_ID
+            - name: KAFKA_BROKERS
+              value: 'http://kafka-srv:9092'
+            - name: KAKFA_CLIENT_ID
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name

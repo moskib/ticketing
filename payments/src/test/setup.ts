@@ -6,7 +6,7 @@ declare global {
   var signin: (id?: string) => string[];
 }
 
-jest.mock('../nats-wrapper');
+jest.mock('../kafka-wrapper.ts');
 
 let mongo: MongoMemoryServer;
 
