@@ -14,7 +14,7 @@ const start = async () => {
   if (!process.env.KAFKA_BROKERS) {
     throw new Error('KAFKA_BROKERS is required');
   }
-  if (!process.env.KAKFA_CLIENT_ID) {
+  if (!process.env.KAFKA_CLIENT_ID) {
     throw new Error('KAKFA_CLIENT_ID is required');
   }
   try {

@@ -17,8 +17,8 @@ spec:
           image: moskib/payments
           env:
             - name: KAFKA_BROKERS
-              value: 'http://kafka-srv:9092'
-            - name: KAKFA_CLIENT_ID
+              value: 'kafka-srv:9092'
+            - name: KAFKA_CLIENT_ID
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
