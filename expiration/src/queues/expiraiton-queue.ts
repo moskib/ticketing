@@ -1,6 +1,6 @@
 import Queeu from 'bull';
-import { ExpirationCompletePublisher } from '../evets/publishers/expiraiton-complete-publisher';
-import { natsWrapper } from '../nats-wrapper';
+import { ExpirationCompleteConsumer } from '../events/producers/expiraiton-complete-producer';
+import { kafkaWrapper } from '../kafka-wrapper';
 
 interface Payload {
   orderId: string;
@@ -13,7 +13,7 @@ const expirationQueue = new Queeu<Payload>('order:expiration', {
 });
 
 expirationQueue.process(async (job) => {
-  new ExpirationCompletePublisher(natsWrapper.client).publish({
+  new ExpirationCompleteConsumer(kafkaWrapper.producer).send({
     orderId: job.data.orderId,
   });
 });
