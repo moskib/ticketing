@@ -37,6 +37,7 @@ const start = async () => {
     console.log('Connected to mongodb!');
   } catch (error) {
     console.error(error);
+    kafkaWrapper.disconnect();
   }
 
   app.listen(3000, () => {
