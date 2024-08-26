@@ -1,13 +1,13 @@
 import { TicketCreatedEvent } from '@mkgittix/core';
-import { natsWrapper } from '../../../nats-wrapper';
-import { TicketCreatedListener } from '../ticket-created-listener';
+import { TicketCreatedConsumer } from '../ticket-created-consumer';
 import mongoose from 'mongoose';
 import { Message } from 'node-nats-streaming';
 import { Ticket } from '../../../models/ticket';
+import { kafkaWrapper } from '../../../kafka-wrapper';
 
 const setup = async () => {
-  // create an instance of the listener
-  const listener = new TicketCreatedListener(natsWrapper.client);
+  // create an instance of the consumer
+  const consumer = new TicketCreatedConsumer(kafkaWrapper);
 
   // create a fake data event
   const data: TicketCreatedEvent['data'] = {
@@ -18,20 +18,14 @@ const setup = async () => {
     userId: new mongoose.Types.ObjectId().toHexString(),
   };
 
-  // crate a fake message object
-  // @ts-ignore
-  const msg: Message = {
-    ack: jest.fn(),
-  };
-
-  return { listener, data, msg };
+  return { consumer, data };
 };
 
 it('creates and saves aticket', async () => {
-  const { data, listener, msg } = await setup();
+  const { data, consumer } = await setup();
 
   // call the onMessage function with the data object + message object
-  await listener.onMessage(data, msg);
+  await consumer.onMessage(data);
 
   // write assertions to make sure a ticket was created
   const ticket = await Ticket.findById(data.id);
@@ -39,14 +33,4 @@ it('creates and saves aticket', async () => {
   expect(ticket).toBeDefined();
   expect(ticket!.title).toEqual(data.title);
   expect(ticket!.price).toEqual(data.price);
-});
-
-it('ack the message', async () => {
-  const { data, listener, msg } = await setup();
-
-  // call the onMessage function with the data object + message object
-  await listener.onMessage(data, msg);
-
-  // write assersions to make sure ack function is called
-  expect(msg.ack).toHaveBeenCalled();
 });

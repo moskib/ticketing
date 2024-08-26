@@ -1,22 +1,20 @@
 import {
+  BaseConsumer,
   ExpirationCompleteEvent,
-  Listener,
   OrderStatus,
-  Subjects,
+  Topics,
 } from '@mkgittix/core';
 import { Message } from 'node-nats-streaming';
 import { ORDERS_SERVICE_QUEUE_GROUP_NAME } from './queue-group-name';
 import { Order } from '../../models/order';
-import { OrderCancelledPublisher } from '../publishers/order-cancelled-publisher';
+import { OrderCancelledProducer } from '../producers/order-cancelled-producer';
+import { kafkaWrapper } from '../../kafka-wrapper';
 
-export class ExpirationCompleteListener extends Listener<ExpirationCompleteEvent> {
-  readonly subject = Subjects.ExpirationComplete;
-  queueGroupName = ORDERS_SERVICE_QUEUE_GROUP_NAME;
+export class ExpirationCompleteConsumer extends BaseConsumer<ExpirationCompleteEvent> {
+  readonly topic = Topics.ExpirationComplete;
+  groupId = ORDERS_SERVICE_QUEUE_GROUP_NAME;
 
-  async onMessage(
-    data: ExpirationCompleteEvent['data'],
-    msg: Message
-  ): Promise<void> {
+  async onMessage(data: ExpirationCompleteEvent['data']): Promise<void> {
     const order = await Order.findById(data.orderId).populate('ticket');
 
     if (!order) {
@@ -24,7 +22,8 @@ export class ExpirationCompleteListener extends Listener<ExpirationCompleteEvent
     }
 
     if (order.status === OrderStatus.Complete) {
-      return msg.ack();
+      console.log('order status is already complete');
+      return;
     }
 
     order.set({
@@ -33,14 +32,12 @@ export class ExpirationCompleteListener extends Listener<ExpirationCompleteEvent
 
     await order.save();
 
-    new OrderCancelledPublisher(this.client).publish({
+    new OrderCancelledProducer(kafkaWrapper.producer).send({
       id: order.id,
       version: order.version,
       ticket: {
         id: order.ticket.id,
       },
     });
-
-    msg.ack();
   }
 }

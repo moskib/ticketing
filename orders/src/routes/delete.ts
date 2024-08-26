@@ -6,8 +6,8 @@ import {
   OrderStatus,
   requireAuth,
 } from '@mkgittix/core';
-import { OrderCancelledPublisher } from '../events/publishers/order-cancelled-publisher';
-import { natsWrapper } from '../nats-wrapper';
+import { OrderCancelledProducer } from '../events/producers/order-cancelled-producer';
+import { kafkaWrapper } from '../kafka-wrapper';
 
 const router = express.Router();
 
@@ -28,7 +28,7 @@ router.delete(
     order.status = OrderStatus.Cancelled;
     await order.save();
 
-    new OrderCancelledPublisher(natsWrapper.client).publish({
+    new OrderCancelledProducer(kafkaWrapper.producer).send({
       id: order.id,
       version: order.version,
       ticket: {

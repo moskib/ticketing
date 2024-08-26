@@ -1,13 +1,12 @@
 import mongoose from 'mongoose';
 import { Ticket } from '../../../models/ticket';
-import { natsWrapper } from '../../../nats-wrapper';
-import { TicketUpdatedListener } from '../ticket-updated-listener';
+import { TicketUpdatedConsumer } from '../ticket-updated-consumer';
 import { TicketUpdatedEvent } from '@mkgittix/core';
-import { Message } from 'node-nats-streaming';
+import { kafkaWrapper } from '../../../kafka-wrapper';
 
 const setup = async () => {
-  // Create a listener
-  const listener = new TicketUpdatedListener(natsWrapper.client);
+  // Create a consumer
+  const consumer = new TicketUpdatedConsumer(kafkaWrapper);
 
   // Create and save a ticket
   const ticket = Ticket.build({
@@ -26,19 +25,13 @@ const setup = async () => {
     userId: 'asdlfkj',
   };
 
-  // Create a fake msg object
-  // @ts-ignore
-  const msg: Message = {
-    ack: jest.fn(),
-  };
-
-  return { msg, data, ticket, listener };
+  return { data, ticket, consumer };
 };
 
 it('finds, updates, and saves a ticket', async () => {
-  const { listener, data, ticket, msg } = await setup();
+  const { consumer, data, ticket } = await setup();
 
-  await listener.onMessage(data, msg);
+  await consumer.onMessage(data);
 
   const updatedTicket = await Ticket.findById(ticket.id);
 
@@ -47,28 +40,19 @@ it('finds, updates, and saves a ticket', async () => {
   expect(updatedTicket!.version).toEqual(data.version);
 });
 
-it('acks the message', async () => {
-  const { listener, data, msg } = await setup();
-
-  await listener.onMessage(data, msg);
-
-  expect(msg.ack).toHaveBeenCalled();
-});
-
 it('does not call ack if the event has a skipped version number', async () => {
-  const { msg, data, listener, ticket } = await setup();
+  const { data, consumer } = await setup();
 
   data.version = 10;
 
   let error;
 
   try {
-    await listener.onMessage(data, msg);
+    await consumer.onMessage(data);
   } catch (err) {
     error = err;
   }
 
   expect(error).toBeDefined();
   expect(error).toBeInstanceOf(Error);
-  expect(msg.ack).not.toHaveBeenCalled();
 });

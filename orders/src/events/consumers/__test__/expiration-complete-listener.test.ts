@@ -1,13 +1,12 @@
 import mongoose from 'mongoose';
 import { Order, OrderStatus } from '../../../models/order';
 import { Ticket } from '../../../models/ticket';
-import { natsWrapper } from '../../../nats-wrapper';
-import { ExpirationCompleteListener } from '../expiration-complete-listener';
-import { Message } from 'node-nats-streaming';
+import { ExpirationCompleteConsumer } from '../expiration-complete-consumer';
 import { ExpirationCompleteEvent } from '@mkgittix/core';
+import { kafkaWrapper } from '../../../kafka-wrapper';
 
 const setup = async () => {
-  const listener = new ExpirationCompleteListener(natsWrapper.client);
+  const consumer = new ExpirationCompleteConsumer(kafkaWrapper);
 
   const ticket = Ticket.build({
     id: new mongoose.Types.ObjectId().toHexString(),
@@ -28,39 +27,29 @@ const setup = async () => {
     orderId: order.id,
   };
 
-  // @ts-ignore
-  const msg: Message = {
-    ack: jest.fn(),
-  };
-
-  return { listener, order, ticket, data, msg };
+  return { consumer, order, ticket, data };
 };
 
 it('updates the order status to cancelled', async () => {
-  const { listener, order, data, msg } = await setup();
+  const { consumer, order, data } = await setup();
 
-  await listener.onMessage(data, msg);
+  await consumer.onMessage(data);
 
   const updatedOrder = await Order.findById(order.id);
 
   expect(updatedOrder!.status).toEqual(OrderStatus.Cancelled);
 });
+
 it('emit an OrderCancelled event', async () => {
-  const { listener, order, data, msg } = await setup();
+  const { consumer, order, data } = await setup();
 
-  await listener.onMessage(data, msg);
+  await consumer.onMessage(data);
 
-  expect(natsWrapper.client.publish).toHaveBeenCalled();
+  expect(kafkaWrapper.producer.send).toHaveBeenCalled();
 
   const eventData = JSON.parse(
-    (natsWrapper.client.publish as jest.Mock).mock.calls[0][1]
+    (kafkaWrapper.producer.send as jest.Mock).mock.calls[0][0].messages[0].value
   );
+
   expect(eventData.id).toEqual(order.id);
-});
-it('ack the message', async () => {
-  const { listener, data, msg } = await setup();
-
-  await listener.onMessage(data, msg);
-
-  expect(msg.ack).toHaveBeenCalled();
 });
